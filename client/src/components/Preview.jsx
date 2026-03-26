@@ -61,13 +61,9 @@ export default function Preview({ image, location, settings }) {
     const padding = Math.max(12, Math.floor(baseFontSize * 0.8));
     const mapSize = Math.max(80, Math.min(180, canvasWidth * 0.22)); // Max 180px or 22% of width
     
-    // Attempt to shorten extremely long addresses (e.g. from Nominatim)
-    // If it has many commas, take first part and last 3 parts.
+    // Let the canvas wrap logic handle the long address instead of cutting it
+    // The user wants more information to be visible!
     let displayAddress = loc.address || 'Unknown Location';
-    const addressParts = displayAddress.split(', ');
-    if (addressParts.length > 5) {
-      displayAddress = `${addressParts[0]}, ${addressParts.slice(-3).join(', ')}`;
-    }
     
     const formattedDate = format(new Date(setts.datetime), 'dd MMM yyyy, HH:mm:ss');
     const geoText = `Lat: ${loc.lat.toFixed(6)}  Lng: ${loc.lng.toFixed(6)}`;
@@ -168,23 +164,18 @@ export default function Preview({ image, location, settings }) {
     // Draw Mini Map to the right
     try {
       const zoom = 14;
-      const x = Math.floor((loc.lng + 180) / 360 * Math.pow(2, zoom));
-      const y = Math.floor((1 - Math.log(Math.tan(loc.lat * Math.PI / 180) + 1 / Math.cos(loc.lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
-      
-      // Calculate offset inside the tile to draw the pin precisely
-      const lon_width = 360.0 / Math.pow(2, zoom);
-      const start_lon = -180.0 + x * lon_width;
-      const x_offset = ((loc.lng - start_lon) / lon_width) * mapSize;
+      const n = Math.pow(2, zoom);
+      const globalX = ((loc.lng + 180) / 360) * n;
+      const latRad = loc.lat * Math.PI / 180;
+      const globalY = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
 
-      const n = Math.PI - 2.0 * Math.PI * y / Math.pow(2, zoom);
-      const start_lat = 180.0 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-      const next_n = Math.PI - 2.0 * Math.PI * (y + 1) / Math.pow(2, zoom);
-      const end_lat = 180.0 / Math.PI * Math.atan(0.5 * (Math.exp(next_n) - Math.exp(-next_n)));
+      const tileX = Math.floor(globalX);
+      const tileY = Math.floor(globalY);
       
-      const lat_height = start_lat - end_lat;
-      const y_offset = ((start_lat - loc.lat) / lat_height) * mapSize;
+      const fractionX = globalX - tileX;
+      const fractionY = globalY - tileY;
 
-      const tileUrl = `https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
+      const tileUrl = `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`;
       const mapImg = new Image();
       mapImg.crossOrigin = 'anonymous';
       
@@ -198,9 +189,9 @@ export default function Preview({ image, location, settings }) {
 
         ctx.drawImage(mapImg, mapX, mapY, mapSize, mapSize);
 
-        // precise pin placement
-        let pinX = mapX + x_offset;
-        let pinY = mapY + y_offset;
+        // precise pin placement using perfectly scaled tile fractions
+        let pinX = mapX + fractionX * mapSize;
+        let pinY = mapY + fractionY * mapSize;
         
         // clamp pin to map view
         pinX = Math.max(mapX, Math.min(mapX + mapSize, pinX));
