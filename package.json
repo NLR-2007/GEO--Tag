@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "autoprefixer": "^10.4.27",
+    "axios": "^1.13.6",
+    "date-fns": "^4.1.0",
+    "html2canvas": "^1.4.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.7.0",
+    "postcss": "^8.5.8",
+    "react-leaflet": "^5.0.0",
+    "react-webcam": "^7.2.0",
+    "tailwindcss": "^4.2.2"
+  }
+}
